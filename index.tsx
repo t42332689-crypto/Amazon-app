@@ -59,6 +59,10 @@ const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   e.currentTarget.src = "https://placehold.co/600x400?text=Image+Not+Found";
 };
 
+const formatNumber = (num: number) => {
+  return new Intl.NumberFormat('en-US').format(num);
+};
+
 // --- Components ---
 
 const Header = ({ cartCount, onSearch, setView, searchTerm, onLoginTrigger }: any) => (
@@ -148,6 +152,11 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
     return product.customerReviews.reduce((acc: number, r: any) => acc + Number(r.rating), 0) / product.customerReviews.length;
   }, [product.customerReviews, product.rating]);
 
+  // Only show first 5 custom reviews
+  const visibleReviews = useMemo(() => {
+    return (product.customerReviews || []).slice(0, 5);
+  }, [product.customerReviews]);
+
   return (
     <div className="bg-white min-h-screen text-[#0f1111]">
       <div className="max-w-[1500px] mx-auto p-4 md:p-8">
@@ -176,7 +185,7 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
               <div className="flex text-[#ffa41c]">
                 {[...Array(5)].map((_, i) => <Star key={i} size={16} fill={i < Math.floor(averageRating) ? "currentColor" : "none"} strokeWidth={1} />)}
               </div>
-              <span className="text-sm text-[#007185] cursor-pointer hover:underline">{product.customerReviews?.length || 0} ratings</span>
+              <span className="text-sm text-[#007185] cursor-pointer hover:underline">{formatNumber(product.reviews_count || product.customerReviews?.length || 0)} ratings</span>
             </div>
             <div className="border-y py-3">
               <div className="flex items-start gap-1 text-[#0f1111]">
@@ -238,10 +247,11 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
                 </div>
                 <span className="font-bold text-lg text-[#0f1111]">{averageRating.toFixed(1)} out of 5</span>
               </div>
+              <p className="text-sm text-gray-500 mb-6">{formatNumber(product.reviews_count || 0)} global ratings</p>
            </div>
            <div className="lg:col-span-8 space-y-8">
               <h3 className="text-lg font-bold text-[#0f1111]">Top reviews from the United States</h3>
-              {!product.customerReviews || product.customerReviews.length === 0 ? <p className="text-gray-500 italic">No reviews yet.</p> : product.customerReviews.map((review: any) => (
+              {!visibleReviews || visibleReviews.length === 0 ? <p className="text-gray-500 italic">No reviews yet.</p> : visibleReviews.map((review: any) => (
                 <div key={review.id} className="space-y-2 border-b pb-8 last:border-0">
                   <div className="flex items-center gap-3">
                     <div className="bg-gray-200 rounded-full p-2"><User size={20} className="text-gray-500" /></div>
@@ -262,6 +272,14 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
                   </div>
                 </div>
               ))}
+              {(product.customerReviews?.length > 5 || (product.reviews_count || 0) > 5) && (
+                <button 
+                  onClick={() => alert("Normally this would lead to a dedicated reviews page.")}
+                  className="text-sm font-bold text-[#007185] hover:text-[#c45500] hover:underline"
+                >
+                  See more reviews
+                </button>
+              )}
            </div>
         </div>
       </div>
@@ -299,17 +317,18 @@ const AdminPanel = ({
           <div className="bg-white rounded-xl shadow p-6">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800">Product Management</h2>
-              <button onClick={() => setEditingProduct({ id: 0, title: '', price: 0, images: [''], description: '', features: '', brand_info: '', product_info: '', buy_now_url: '', customerReviews: [] })} className="bg-[#f0c14b] px-6 py-2 rounded-lg font-bold border border-[#a88734] hover:bg-[#e2b13c] shadow-sm">+ Create New Product</button>
+              <button onClick={() => setEditingProduct({ id: 0, title: '', price: 0, reviews_count: 0, images: [''], description: '', features: '', brand_info: '', product_info: '', buy_now_url: '', customerReviews: [] })} className="bg-[#f0c14b] px-6 py-2 rounded-lg font-bold border border-[#a88734] hover:bg-[#e2b13c] shadow-sm">+ Create New Product</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead><tr className="border-b bg-gray-50"><th className="p-4 text-xs font-bold text-gray-500 uppercase">Thumbnail</th><th className="p-4 text-xs font-bold text-gray-500 uppercase">Title</th><th className="p-4 text-xs font-bold text-gray-500 uppercase">Price</th><th className="p-4 text-xs font-bold text-gray-500 uppercase text-right">Actions</th></tr></thead>
+                <thead><tr className="border-b bg-gray-50"><th className="p-4 text-xs font-bold text-gray-500 uppercase">Thumbnail</th><th className="p-4 text-xs font-bold text-gray-500 uppercase">Title</th><th className="p-4 text-xs font-bold text-gray-500 uppercase">Price</th><th className="p-4 text-xs font-bold text-gray-500 uppercase">Total Ratings</th><th className="p-4 text-xs font-bold text-gray-500 uppercase text-right">Actions</th></tr></thead>
                 <tbody>
                   {products.map((p: any) => (
                     <tr key={p.id} className="border-b hover:bg-gray-50 transition-colors text-[#0f1111]">
                       <td className="p-4"><img src={p.images?.[0] || ''} className="w-12 h-12 object-contain bg-white border p-1 rounded" onError={handleImageError} /></td>
                       <td className="p-4 font-medium text-gray-800 line-clamp-1">{p.title}</td>
                       <td className="p-4 font-bold text-green-700">${Number(p.price).toFixed(2)}</td>
+                      <td className="p-4 text-gray-600 font-medium">{formatNumber(p.reviews_count || 0)}</td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button onClick={() => setEditingProduct({...p})} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={18} /></button>
@@ -390,10 +409,14 @@ const AdminPanel = ({
                         <label className="block text-sm font-bold text-gray-700 mb-1">Product Title</label>
                         <input className="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-500 outline-none transition-all text-[#0f1111]" value={editingProduct.title} onChange={e => setEditingProduct({...editingProduct, title: e.target.value})} />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-bold text-gray-700 mb-1">Price ($)</label>
-                          <input type="number" className="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-500 outline-none text-[#0f1111]" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})} />
+                          <input type="number" step="0.01" className="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-500 outline-none text-[#0f1111]" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-1">Total Ratings (e.g. 10000)</label>
+                          <input type="number" className="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-500 outline-none text-[#0f1111]" value={editingProduct.reviews_count} onChange={e => setEditingProduct({...editingProduct, reviews_count: parseInt(e.target.value) || 0})} />
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-gray-700 mb-1">Buy Now Redirect URL</label>
@@ -433,11 +456,17 @@ const AdminPanel = ({
                  <div className="md:col-span-5 space-y-6">
                     <div className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-100 h-full">
                        <div className="flex justify-between items-center mb-6 border-b pb-4">
-                          <h4 className="font-black text-xs text-gray-400 uppercase tracking-widest">Customer Reviews</h4>
-                          <button onClick={() => {
-                            const r = { id: 0, user_name: 'Amazon Customer', rating: 5, date: new Date().toLocaleDateString(), comment: '', images: [], verified: true };
-                            setEditingProduct({...editingProduct, customerReviews: [...(editingProduct.customerReviews || []), r]});
-                          }} className="text-[10px] bg-blue-600 text-white px-3 py-1.5 rounded-full font-bold hover:bg-blue-700">+ Add Review</button>
+                          <h4 className="font-black text-xs text-gray-400 uppercase tracking-widest">Top 5 Custom Reviews</h4>
+                          <button 
+                            disabled={editingProduct.customerReviews?.length >= 5}
+                            onClick={() => {
+                              const r = { id: 0, user_name: 'Amazon Customer', rating: 5, date: new Date().toLocaleDateString(), comment: '', images: [], verified: true };
+                              setEditingProduct({...editingProduct, customerReviews: [...(editingProduct.customerReviews || []), r]});
+                            }} 
+                            className={`text-[10px] px-3 py-1.5 rounded-full font-bold transition-all ${editingProduct.customerReviews?.length >= 5 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                          >
+                            + Add Review
+                          </button>
                        </div>
                        
                        <div className="space-y-6 max-h-[1000px] overflow-y-auto pr-2">
@@ -454,10 +483,19 @@ const AdminPanel = ({
                                  <textarea className="w-full p-2 text-xs border bg-gray-50 h-20 rounded outline-none text-[#0f1111]" value={rev.comment} onChange={e => {
                                    const rs = [...editingProduct.customerReviews]; rs[idx].comment = e.target.value; setEditingProduct({...editingProduct, customerReviews: rs});
                                  }} placeholder="Review Comment..." />
+                                 <div className="flex gap-2 items-center">
+                                    <span className="text-xs font-bold">Rating:</span>
+                                    <select className="text-xs border rounded p-1" value={rev.rating} onChange={e => {
+                                       const rs = [...editingProduct.customerReviews]; rs[idx].rating = parseInt(e.target.value); setEditingProduct({...editingProduct, customerReviews: rs});
+                                    }}>
+                                       {[5,4,3,2,1].map(v => <option key={v} value={v}>{v} Stars</option>)}
+                                    </select>
+                                 </div>
                                </div>
                             </div>
                           ))}
                        </div>
+                       {editingProduct.customerReviews?.length === 0 && <p className="text-center text-gray-400 text-sm py-8 italic">No custom reviews added.</p>}
                     </div>
                  </div>
               </div>
@@ -606,7 +644,7 @@ export default function AmazonClone() {
   const onProductSelect = (p: Product) => { setSelectedProduct(p); setView('detail'); window.scrollTo(0,0); };
 
   const onSaveProduct = async (p: any) => {
-    // Crucial: Separate ID and reviews from the main object to save
+    // Separate ID and reviews from the main object to save
     const { id, customerReviews, reviews, ...productData } = p;
     
     let productId = id;
@@ -620,7 +658,7 @@ export default function AmazonClone() {
           return;
       }
     } else {
-      // Create new - SUPABASE WILL GENERATE THE ID
+      // Create new
       const { data: insertData, error: insertError } = await supabase.from('products').insert([productData]).select();
       if (insertError) {
           console.error("Insert Error:", insertError);
@@ -632,7 +670,7 @@ export default function AmazonClone() {
 
     // Save Reviews if any
     if (productId && customerReviews) {
-        // Simple strategy: replace all reviews for this product
+        // Delete old and insert current (limit to 5 to keep DB light as per user request for visual "fake" total)
         await supabase.from('reviews').delete().eq('product_id', productId);
         const reviewsToInsert = customerReviews.map((r: any) => ({
             product_id: productId,
@@ -765,7 +803,7 @@ export default function AmazonClone() {
                            <h3 className="text-sm font-medium line-clamp-2 mb-2 leading-snug h-10 text-[#007185] group-hover:text-[#c45500] group-hover:underline">{p.title}</h3>
                            <div className="flex text-[#ffa41c] mb-1 items-center">
                              {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < Math.floor(p.rating || 4.5) ? "currentColor" : "none"} />)}
-                             <span className="text-xs text-blue-600 ml-2 font-medium">{p.customerReviews?.length || 0}</span>
+                             <span className="text-xs text-blue-600 ml-2 font-medium">{formatNumber(p.reviews_count || p.customerReviews?.length || 0)}</span>
                            </div>
                            <div className="mt-auto pt-2">
                             <div className="flex items-start">
