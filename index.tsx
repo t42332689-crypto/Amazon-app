@@ -157,6 +157,23 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
     return (product.customerReviews || []).slice(0, 5);
   }, [product.customerReviews]);
 
+  // Frequently bought together logic
+  const companionProducts = useMemo(() => {
+    return allProducts
+      .filter((p: Product) => p.id !== product.id)
+      .slice(0, 2);
+  }, [allProducts, product.id]);
+
+  const bundleTotalPrice = useMemo(() => {
+    return Number(product.price) + companionProducts.reduce((acc: number, p: Product) => acc + Number(p.price), 0);
+  }, [product.price, companionProducts]);
+
+  const addBundleToCart = () => {
+    addToCart(product);
+    companionProducts.forEach((p: Product) => addToCart(p));
+    alert("Bundle added to cart!");
+  };
+
   return (
     <div className="bg-white min-h-screen text-[#0f1111]">
       <div className="max-w-[1500px] mx-auto p-4 md:p-8">
@@ -218,6 +235,55 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
             </div>
           </div>
         </div>
+
+        {/* Frequently Bought Together Section */}
+        {companionProducts.length > 0 && (
+          <div className="mt-12 border-t pt-8">
+            <h2 className="text-xl font-bold mb-6 text-[#0f1111]">Frequently bought together</h2>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex items-center gap-4 flex-wrap justify-center">
+                <div className="w-40 h-40 bg-white border rounded p-4 flex items-center justify-center">
+                  <img src={product.images[0]} className="max-h-full max-w-full object-contain" />
+                </div>
+                {companionProducts.map((p: Product) => (
+                  <React.Fragment key={p.id}>
+                    <Plus className="text-gray-400" size={24} />
+                    <div className="w-40 h-40 bg-white border rounded p-4 flex items-center justify-center cursor-pointer" onClick={() => onProductSelect(p)}>
+                      <img src={p.images[0]} className="max-h-full max-w-full object-contain" />
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="flex-1 space-y-4">
+                <div className="text-lg">
+                  <span className="text-gray-600">Total price: </span>
+                  <span className="font-bold text-[#b12704]">${bundleTotalPrice.toFixed(2)}</span>
+                </div>
+                <button 
+                  onClick={addBundleToCart}
+                  className="bg-[#ffd814] hover:bg-[#f7ca00] text-black rounded-lg px-6 py-2 text-sm font-medium border border-[#fcd200] shadow-sm"
+                >
+                  Add all {companionProducts.length + 1} to Cart
+                </button>
+              </div>
+            </div>
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked readOnly className="accent-[#e77600]" />
+                <span className="font-bold">This item:</span>
+                <span className="text-[#007185] hover:underline cursor-pointer">{product.title}</span>
+                <span className="font-bold ml-auto">${Number(product.price).toFixed(2)}</span>
+              </div>
+              {companionProducts.map((p: Product) => (
+                <div key={p.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked readOnly className="accent-[#e77600]" />
+                  <span className="text-[#007185] hover:underline cursor-pointer" onClick={() => onProductSelect(p)}>{p.title}</span>
+                  <span className="font-bold ml-auto">${Number(p.price).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-12 border-t pt-8">
            <h2 className="text-xl font-bold mb-4 text-[#0f1111]">Product information</h2>
