@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,23 +10,31 @@
     <style>
         body {
             background-color: #eaeded;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .amazon-gradient {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+            font-family: "Amazon Ember", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
         .hero-gradient {
-            background: linear-gradient(to bottom, transparent, #eaeded);
-        }
-        .search-select {
-            background-color: #f3f3f3;
-            border-right: 1px solid #cdcdcd;
+            background: linear-gradient(to bottom, transparent 60%, #eaeded 100%);
         }
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Specific Amazon Button Gradients */
+        .btn-amazon-primary {
+            background: linear-gradient(to bottom, #f7dfa5, #f0c14b);
+        }
+        .btn-amazon-secondary {
+            background: linear-gradient(to bottom, #f8e3ad, #eeb933);
         }
     </style>
 <script type="importmap">
@@ -35,6 +44,8 @@
     "react": "https://esm.sh/react@^19.2.3",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
     "path": "https://esm.sh/path@^0.12.7",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "vite": "https://esm.sh/vite@^7.3.1",
@@ -42,11 +53,9 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
-<script type="module" src="/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
