@@ -52,7 +52,6 @@ interface CategoryCard {
 // --- Shared Utils ---
 const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
   const target = e.currentTarget;
-  // Prevent infinite loops if fallback also fails
   if (target.src.includes('placehold.co')) return;
   target.src = "https://placehold.co/600x400?text=Image+Not+Found";
 };
@@ -87,40 +86,6 @@ const StarRating = ({ rating, size = 16 }: { rating: number; size?: number }) =>
           strokeWidth={i < Math.floor(safeRating) ? 0 : 1}
         />
       ))}
-    </div>
-  );
-};
-
-const ReviewDistribution = ({ reviews }: { reviews: Review[] }) => {
-  const counts = [0, 0, 0, 0, 0];
-  const safeReviews = Array.isArray(reviews) ? reviews : [];
-  safeReviews.forEach(r => {
-    const rVal = Number(r.rating);
-    if (rVal >= 1 && rVal <= 5) {
-      const idx = 5 - Math.floor(rVal);
-      if (counts[idx] !== undefined) counts[idx]++;
-    }
-  });
-  const total = safeReviews.length || 1;
-
-  return (
-    <div className="space-y-2 mb-6 w-full">
-      {[5, 4, 3, 2, 1].map((star, idx) => {
-        const count = counts[idx];
-        const percentage = Math.round((count / total) * 100);
-        return (
-          <div key={star} className="flex items-center gap-4 text-sm hover:bg-gray-50 p-0.5 cursor-pointer group">
-            <span className="text-[#007185] group-hover:text-[#c45500] whitespace-nowrap w-12 text-xs font-medium">{star} star</span>
-            <div className="flex-1 h-5 bg-gray-100 border border-gray-300 rounded-sm overflow-hidden">
-              <div 
-                className="h-full bg-[#ffa41c] border-r border-gray-400" 
-                style={{ width: `${percentage}%` }}
-              ></div>
-            </div>
-            <span className="text-[#007185] group-hover:text-[#c45500] w-8 text-right text-xs">{percentage}%</span>
-          </div>
-        );
-      })}
     </div>
   );
 };
@@ -209,7 +174,7 @@ const Header = ({ cartCount, onSearch, navigateTo, searchTerm, goHome }: any) =>
   </header>
 );
 
-const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelect }: any) => {
+const ProductDetail = ({ product, addToCart, goBack }: any) => {
   const [activeImage, setActiveImage] = useState(product?.images?.[0] || '');
   const [currentReviews, setCurrentReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
@@ -235,7 +200,7 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
       }
     };
     fetchFreshReviews();
-    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+    if (product?.images?.length > 0) {
       setActiveImage(product.images[0]);
     }
     window.scrollTo(0, 0);
@@ -247,22 +212,7 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
     return sum / currentReviews.length;
   }, [currentReviews, product?.rating]);
 
-  const comparisonProducts = useMemo(() => {
-    if (!Array.isArray(allProducts) || !product) return [];
-    return allProducts.filter(p => p && p.id !== product.id).slice(0, 4);
-  }, [allProducts, product?.id]);
-
-  const frequentlyBoughtTogether = useMemo(() => {
-    if (!Array.isArray(allProducts) || !product) return [];
-    return allProducts.filter(p => p && p.id !== product.id).slice(0, 2);
-  }, [allProducts, product?.id]);
-
-  if (!product) return (
-    <div className="p-20 text-center flex flex-col items-center gap-4">
-      <Loader2 className="animate-spin text-[#232f3e]" size={40} />
-      <p className="text-gray-600 font-medium">Looking up product details...</p>
-    </div>
-  );
+  if (!product) return null;
 
   const deliveryDateString = getDeliveryDate(1);
   const deliveryShortDate = deliveryDateString.includes(',') ? deliveryDateString.split(',')[1].trim() : deliveryDateString;
@@ -293,9 +243,6 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
             </div>
             <div className="flex-1 order-1 md:order-2 sticky top-28 h-fit bg-white z-10">
               <ImageZoom src={activeImage} />
-              <p className="text-center text-[#565959] text-xs mt-4 font-medium flex items-center justify-center gap-2">
-                <Search size={14} /> Roll over image to zoom in
-              </p>
             </div>
           </div>
 
@@ -307,7 +254,6 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
                 <div className="flex items-center gap-1 border-l pl-2">
                   <span className="text-sm font-bold">{averageRating.toFixed(1)}</span>
                   <StarRating rating={averageRating} />
-                  <ChevronDown size={12} className="text-[#565959]" />
                   <span className="text-sm text-[#007185] hover:text-[#c45500] hover:underline cursor-pointer">
                     {formatNumber(product.reviews_count || currentReviews.length)} ratings
                   </span>
@@ -324,44 +270,16 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
                   <span className="text-sm mt-1 font-medium">{(Number(product.price || 0) % 1).toFixed(2).substring(2)}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-[#565959]">List Price: <span className="line-through">${(Number(product.price || 0) * 1.22).toFixed(2)}</span></span>
-                <div className="flex items-center gap-1 cursor-help"><Info size={14} className="text-[#565959]" /></div>
-              </div>
-
-              <div className="flex items-center gap-2 py-1">
-                 <input 
-                   type="checkbox" 
-                   id="coupon" 
-                   checked={isCouponApplied} 
-                   onChange={() => setIsCouponApplied(!isCouponApplied)}
-                   className="w-4 h-4 accent-[#007600] cursor-pointer"
-                 />
-                 <label htmlFor="coupon" className="flex items-center gap-2 cursor-pointer">
-                    <span className="bg-[#e7f4e7] text-[#007600] text-xs font-bold px-2 py-0.5 border border-[#007600] rounded-sm">Coupon</span>
-                    <span className="text-sm">Apply $10.00 coupon</span>
-                 </label>
-              </div>
-
               <div className="flex items-center gap-2 bg-gray-50/50 p-2 border rounded border-dashed">
                 <img src="https://m.media-amazon.com/images/G/01/prime/marketing/slashPrime/amazon-prime-delivery-checkmark._CB611054930_.png" alt="Prime" className="h-4" />
                 <span className="text-sm text-[#565959]">Get it as soon as <span className="text-black font-bold">Tomorrow, {deliveryShortDate}</span></span>
               </div>
             </div>
 
-            <div className="border-y py-4">
-               <div className="grid grid-cols-2 gap-y-2 text-sm max-w-sm">
-                  <span className="font-bold">Brand</span>
-                  <span className="truncate">{product.brand_info?.split('\n')[0] || 'Official Brand'}</span>
-                  <span className="font-bold">Model Number</span>
-                  <span className="font-mono text-xs">AZ-{product.id}</span>
-               </div>
-            </div>
-
             <div className="space-y-2">
               <h3 className="font-bold text-base">About this item</h3>
               <ul className="list-disc ml-5 text-sm space-y-3 text-[#0f1111] leading-relaxed">
-                {(product.features || "High quality product\nGreat performance\nAmazon Choice").split('\n').filter(Boolean).map((line: string, i: number) => (
+                {(product.features || "High quality product").split('\n').filter(Boolean).map((line: string, i: number) => (
                   <li key={i}>{line}</li>
                 ))}
               </ul>
@@ -374,9 +292,6 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
                 <span className="text-sm mt-1 font-medium">$</span>
                 <span className="text-3xl font-medium">{(Number(product.price || 0) - (isCouponApplied ? 10 : 0)).toFixed(2)}</span>
               </div>
-              <p className="text-sm text-[#565959]">
-                Get <span className="font-bold">FREE delivery</span> <span className="text-black font-bold">{getDeliveryDate(1)}</span>
-              </p>
               <p className="text-lg text-[#007600] font-medium">In Stock</p>
               <div className="space-y-3">
                 <button 
@@ -384,12 +299,6 @@ const ProductDetail = ({ product, allProducts, addToCart, goBack, onProductSelec
                   className="w-full bg-[#ffd814] hover:bg-[#f7ca00] text-black rounded-full py-2 font-medium text-sm shadow-sm border border-[#fcd200]"
                 >
                   Add to Cart
-                </button>
-                <button 
-                  onClick={() => product.buy_now_url ? window.open(product.buy_now_url, '_blank') : alert('Order placed!')} 
-                  className="w-full bg-[#ffa41c] hover:bg-[#fa8900] text-black rounded-full py-2 font-medium text-sm shadow-sm border border-[#ca8114]"
-                >
-                  Buy Now
                 </button>
               </div>
             </div>
@@ -419,7 +328,6 @@ const AdminPanel = ({ products = [], onSaveProduct, onDeleteProduct, onLogout }:
               <tr className="bg-gray-100 border-b">
                 <th className="p-4 text-xs font-black uppercase">Preview</th>
                 <th className="p-4 text-xs font-black uppercase">Title</th>
-                <th className="p-4 text-xs font-black uppercase">Price</th>
                 <th className="p-4 text-xs font-black uppercase text-right">Action</th>
               </tr>
             </thead>
@@ -428,7 +336,6 @@ const AdminPanel = ({ products = [], onSaveProduct, onDeleteProduct, onLogout }:
                 <tr key={p.id} className="border-b hover:bg-gray-50">
                   <td className="p-4"><img src={p.images?.[0]} className="w-10 h-10 object-contain" onError={handleImageError} /></td>
                   <td className="p-4 font-bold">{p.title?.substring(0, 50)}...</td>
-                  <td className="p-4 font-black text-green-700">${Number(p.price || 0).toFixed(2)}</td>
                   <td className="p-4 text-right">
                     <button onClick={() => setEditingProduct(p)} className="p-2 text-blue-600"><Edit size={18} /></button>
                     <button onClick={() => onDeleteProduct(p.id)} className="p-2 text-red-600"><Trash2 size={18} /></button>
@@ -496,22 +403,24 @@ export default function AmazonClone() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryCard[]>([]);
 
-  // --- Global Navigation & Routing Logic ---
-  const navigateTo = useCallback((newView: 'home' | 'detail' | 'cart' | 'login' | 'admin', productId?: number) => {
-    setView(newView);
+  // Function to sync current state with URL
+  const navigateTo = useCallback((newView: typeof view, productId?: number) => {
     const params = new URLSearchParams(window.location.search);
     params.set('view', newView);
     if (productId) params.set('product', productId.toString());
     else params.delete('product');
     
-    // Update Browser History safely
     const newUrl = `${window.location.pathname}?${params.toString()}`;
-    try {
-      window.history.pushState({ view: newView, productId }, "", newUrl);
-    } catch (e) {
-      console.warn("History push state failed:", e);
+    window.history.pushState({ view: newView, productId }, "", newUrl);
+    
+    setView(newView);
+    if (productId) {
+      const p = products.find(prod => prod.id === productId);
+      if (p) setSelectedProduct(p);
+    } else {
+      setSelectedProduct(null);
     }
-  }, []);
+  }, [products]);
 
   const goHome = useCallback(() => {
     setSelectedProduct(null);
@@ -525,7 +434,7 @@ export default function AmazonClone() {
     navigateTo('detail', p.id);
   }, [navigateTo]);
 
-  // Synchronize state with URL on initial load and history changes
+  // Sync state with URL parameters on mount and history navigation
   useEffect(() => {
     const syncWithUrl = () => {
       try {
@@ -545,7 +454,7 @@ export default function AmazonClone() {
           if (p) setSelectedProduct(p);
         }
       } catch (e) {
-        console.error("Sync URL failed:", e);
+        console.error("URL Sync Error", e);
       }
     };
 
@@ -566,21 +475,10 @@ export default function AmazonClone() {
       }));
       setProducts(formatted);
 
-      const { data: cData, error: cError } = await supabase.from('site_config').select('*');
-      if (cData && !cError) {
+      const { data: cData } = await supabase.from('site_config').select('*');
+      if (cData) {
         const catsObj = cData.find(d => d.key === 'categories');
         if (catsObj) setCategories(Array.isArray(catsObj.value) ? catsObj.value : []);
-      }
-
-      // Check deep-linked product again once products are loaded
-      const params = new URLSearchParams(window.location.search);
-      const urlProductId = params.get('product');
-      if (urlProductId) {
-        const p = formatted.find((prod: any) => prod.id === parseInt(urlProductId));
-        if (p) {
-          setSelectedProduct(p);
-          setView('detail');
-        }
       }
     } catch (err) { 
       console.error("Data Fetch Error:", err); 
@@ -593,20 +491,21 @@ export default function AmazonClone() {
 
   const onSaveProduct = async (p: any) => {
     try {
-      if (p.id === 0) await supabase.from('products').insert([p]);
-      else {
+      if (p.id === 0) {
+        await supabase.from('products').insert([p]);
+      } else {
         const { id, customerReviews, reviews, ...rest } = p;
         await supabase.from('products').update(rest).eq('id', id);
       }
       await fetchData();
     } catch (e) { 
       console.error("Save failed:", e); 
-      alert("Failed to save changes.");
+      alert("Save operation failed.");
     }
   };
 
   const onDeleteProduct = async (id: number) => {
-    if (confirm("Delete this product permanently?")) {
+    if (confirm("Delete product?")) {
       try {
         await supabase.from('products').delete().eq('id', id);
         await fetchData();
@@ -616,12 +515,9 @@ export default function AmazonClone() {
     }
   };
 
-  const cartCount = useMemo(() => Array.isArray(cart) ? cart.reduce((a, b) => a + (b.quantity || 1), 0) : 0, [cart]);
-  const cartSubtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((a, b) => a + Number(b.price || 0), 0) : 0, [cart]);
-  
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
-    return products.filter(p => p && p.title && p.title.toLowerCase().includes((searchTerm || '').toLowerCase()));
+    return products.filter(p => p?.title?.toLowerCase().includes((searchTerm || '').toLowerCase()));
   }, [products, searchTerm]);
 
   if (loading && products.length === 0) {
@@ -629,7 +525,7 @@ export default function AmazonClone() {
       <div className="min-h-screen flex items-center justify-center bg-[#eaeded]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-[#232f3e]" size={40} />
-          <p className="font-black uppercase text-xs tracking-widest text-gray-500">Synchronizing Storefront...</p>
+          <p className="font-bold uppercase text-xs tracking-widest text-gray-500">Connecting Storefront...</p>
         </div>
       </div>
     );
@@ -638,26 +534,26 @@ export default function AmazonClone() {
   return (
     <div className="flex flex-col min-h-screen text-[#0f1111]">
       {view !== 'login' && view !== 'admin' && (
-        <Header cartCount={cartCount} onSearch={setSearchTerm} navigateTo={navigateTo} searchTerm={searchTerm} goHome={goHome} />
+        <Header cartCount={cart.length} onSearch={setSearchTerm} navigateTo={navigateTo} searchTerm={searchTerm} goHome={goHome} />
       )}
       <main className="flex-1 bg-[#eaeded]">
-        {view === 'login' && <LoginView onLogin={(u:any, p:any) => (u === '@Amazon project' && p === '@Amazon project123') ? navigateTo('admin') : alert("Authentication Failed")} onCancel={goHome} />}
+        {view === 'login' && <LoginView onLogin={(u:any, p:any) => (u === '@Amazon project' && p === '@Amazon project123') ? navigateTo('admin') : alert("Auth Error")} onCancel={goHome} />}
         {view === 'admin' && <AdminPanel products={products} onSaveProduct={onSaveProduct} onDeleteProduct={onDeleteProduct} onLogout={goHome} />}
         {view === 'home' && (
           <div className="pb-20">
-            <div className="relative h-[650px] overflow-hidden">
+            <div className="relative h-[300px] md:h-[650px] overflow-hidden">
               <img src="https://m.media-amazon.com/images/I/71Ie3JXGfVL._SX3000_.jpg" className="w-full h-full object-cover" alt="Hero" />
               <div className="absolute inset-0 hero-gradient"></div>
             </div>
-            <div className="max-w-[1500px] mx-auto px-4 mt-[-420px] relative z-10 space-y-8">
+            <div className="max-w-[1500px] mx-auto px-4 mt-[-150px] md:mt-[-420px] relative z-10 space-y-8">
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                {(Array.isArray(categories) ? categories : []).map((cat, i) => (
-                  <div key={i} className="bg-white p-6 shadow-2xl rounded-sm hover:translate-y-[-2px] transition-all">
+                {categories.map((cat, i) => (
+                  <div key={i} className="bg-white p-6 shadow-xl rounded-sm">
                     <h2 className="text-xl font-bold mb-4">{cat.title}</h2>
                     <div className="grid grid-cols-2 gap-4">
                       {(cat.items || []).map((item, j) => (
                         <div key={j} className="flex flex-col cursor-pointer group">
-                          <img src={item.image} className="h-28 object-contain bg-gray-50 p-2 rounded group-hover:scale-110 transition-transform" onError={handleImageError} alt={item.label} />
+                          <img src={item.image} className="h-28 object-contain bg-gray-50 p-2 rounded group-hover:scale-105 transition-transform" onError={handleImageError} alt={item.label} />
                           <span className="text-[11px] font-bold mt-2 truncate">{item.label}</span>
                         </div>
                       ))}
@@ -665,7 +561,7 @@ export default function AmazonClone() {
                   </div>
                 ))}
               </div>
-              <div className="bg-white p-8 shadow-xl rounded-sm">
+              <div className="bg-white p-8 shadow-md rounded-sm">
                 <h2 className="text-2xl font-black mb-8 border-b pb-4 uppercase tracking-tighter">Top Trending Releases</h2>
                 <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
                   {filteredProducts.map(p => (
@@ -676,7 +572,6 @@ export default function AmazonClone() {
                       <h3 className="text-sm font-medium line-clamp-2 h-10 text-[#007185] group-hover:underline">{p.title}</h3>
                       <div className="mt-auto pt-4 flex items-center gap-1 font-black text-xl">
                         <span className="text-sm font-bold mt-1">$</span>{Math.floor(p.price || 0)}
-                        <span className="text-sm font-bold">{(p.price % 1).toFixed(2).substring(2)}</span>
                       </div>
                     </div>
                   ))}
@@ -685,15 +580,15 @@ export default function AmazonClone() {
             </div>
           </div>
         )}
-        {view === 'detail' && selectedProduct && <ProductDetail product={selectedProduct} allProducts={products} addToCart={(p:any) => setCart(prev => [...prev, p])} goBack={goHome} onProductSelect={onProductSelect} />}
+        {view === 'detail' && selectedProduct && <ProductDetail product={selectedProduct} addToCart={(p:any) => setCart(prev => [...prev, p])} goBack={goHome} />}
         {view === 'cart' && (
           <div className="p-4 md:p-12 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-3 bg-white p-6 md:p-8 rounded shadow-2xl">
+            <div className="lg:col-span-3 bg-white p-6 md:p-8 rounded shadow-xl">
               <h1 className="text-2xl md:text-3xl font-black border-b pb-6 mb-8 uppercase tracking-tighter">Shopping Basket</h1>
-              {cartCount === 0 ? (
+              {cart.length === 0 ? (
                 <div className="py-20 text-center flex flex-col items-center gap-4">
                   <ShoppingCart size={60} className="text-gray-200" />
-                  <p className="text-xl text-gray-400 font-bold italic">Your basket is currently empty.</p>
+                  <p className="text-xl text-gray-400 font-bold">Your basket is empty.</p>
                 </div>
               ) : (
                 <div className="space-y-10">
@@ -703,31 +598,13 @@ export default function AmazonClone() {
                       <div className="flex-1">
                         <h3 className="text-xl font-bold hover:underline cursor-pointer" onClick={() => onProductSelect(item)}>{item.title}</h3>
                         <p className="text-2xl font-black mt-4">${Number(item.price || 0).toFixed(2)}</p>
-                        <button onClick={() => setCart(cart.filter((_, idx) => idx !== i))} className="text-xs text-red-500 font-bold mt-6 uppercase hover:underline">Remove Item</button>
+                        <button onClick={() => setCart(cart.filter((_, idx) => idx !== i))} className="text-xs text-red-500 font-bold mt-6 uppercase hover:underline">Remove</button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            {cartCount > 0 && (
-              <div className="bg-white p-8 rounded shadow-2xl h-fit lg:sticky lg:top-24">
-                <p className="text-xl font-black mb-4">Total Subtotal ({cartCount} items):</p>
-                <p className="text-3xl font-black mb-6 text-gray-900">${cartSubtotal.toFixed(2)}</p>
-                <button 
-                  className="w-full bg-[#ffd814] py-4 rounded-2xl font-black shadow-xl border-2 border-[#fcd200] uppercase tracking-widest hover:bg-[#f7ca00] transition-all" 
-                  onClick={() => {
-                    if(confirm("Process this transaction?")) {
-                      setCart([]); 
-                      navigateTo('home'); 
-                      alert("Transaction Finalized. Thank you.");
-                    }
-                  }}
-                >
-                  Authorize Checkout
-                </button>
-              </div>
-            )}
           </div>
         )}
       </main>
